@@ -139,21 +139,112 @@ segment code
 		push		ax
 		call		line
 
-;escrever uma mensagem
+;escrever mensagens
 
-;     	mov     	cx,14			;n�mero de caracteres
-;     	mov     	bx,0
-;     	mov     	dh,0			;linha 0-29
-;     	mov     	dl,30			;coluna 0-79
-; 		mov		byte[cor],azul
-; l4:
-; 		call	cursor
-;     	mov     al,[bx+mens]
-; 		call	caracter
-;     	inc     bx			;proximo caracter
-; 		inc		dl			;avanca a coluna
-; 		inc		byte [cor]		;mudar a cor para a seguinte
-;     	loop    l4
+        ; Abrir
+    	mov     	cx,5			;n�mero de caracteres
+    	mov     	bx,0
+    	mov     	dh,2			
+    	mov     	dl,3			
+		mov		byte[cor],branco_intenso
+
+l4:
+		call	cursor
+    	mov     al,[bx+abrir]
+		call	caracter
+    	inc     bx			;proximo caracter
+		inc		dl			;avanca a coluna
+    	loop    l4
+
+        ; Sair
+    	mov     	cx,4			
+    	mov     	bx,0
+    	mov     	dh,2			
+    	mov     	dl,14			
+		mov		byte[cor],branco_intenso
+
+l5:
+		call	cursor
+    	mov     al,[bx+sair]
+		call	caracter
+    	inc     bx			
+		inc		dl			
+    	loop    l5
+
+        ; Passa-Baixas
+    	mov     	cx,12			
+    	mov     	bx,0
+    	mov     	dh,2			
+    	mov     	dl,23			
+		mov		byte[cor],branco_intenso
+
+l6:
+		call	cursor
+    	mov     al,[bx+passa_baixa]
+		call	caracter
+    	inc     bx			
+		inc		dl			
+    	loop    l6
+
+        ; Passa-Altas
+    	mov     	cx,11			
+    	mov     	bx,0
+    	mov     	dh,2			
+    	mov     	dl,43			
+		mov		byte[cor],branco_intenso
+
+l7:
+		call	cursor
+    	mov     al,[bx+passa_altas]
+		call	caracter
+    	inc     bx			
+		inc		dl			
+    	loop    l7
+
+        ; Gradiente
+    	mov     	cx,9			
+    	mov     	bx,0
+    	mov     	dh,2			
+    	mov     	dl,65			
+		mov		byte[cor],branco_intenso
+
+l8:
+		call	cursor
+    	mov     al,[bx+gradiente]
+		call	caracter
+    	inc     bx			
+		inc		dl			;avanca a coluna
+    	loop    l8
+
+        ; Nome
+    	mov     	cx,29			
+    	mov     	bx,0
+    	mov     	dh,26			
+    	mov     	dl,24			
+		mov		byte[cor],branco_intenso
+
+l9:
+		call	cursor
+    	mov     al,[bx+nome]
+		call	caracter
+    	inc     bx			
+		inc		dl			;avanca a coluna
+    	loop    l9
+
+        ; Disciplina
+    	mov     	cx,30			
+    	mov     	bx,0
+    	mov     	dh,27			
+    	mov     	dl,23			
+		mov		byte[cor],branco_intenso
+
+l10:
+		call	cursor
+    	mov     al,[bx+embarcados]
+		call	caracter
+    	inc     bx			
+		inc		dl			;avanca a coluna
+    	loop    l10
 
 		mov    	ah,08h
 		int     21h
@@ -728,6 +819,13 @@ coluna  	dw  		0
 deltax		dw		0
 deltay		dw		0	
 mens    	db  		'Funcao Grafica'
+abrir    	db  		'Abrir'
+sair        db          'Sair'
+passa_baixa db          'Passa-Baixas'
+passa_altas db          'Passa-Altas'
+gradiente   db          'Gradiente'
+nome        db          'Marco Antonio Milaneze Oliari'
+embarcados  db          'Sistemas Embarcados I - 2022/1'
 ;*************************************************************************
 segment stack stack
     		resb 		512
