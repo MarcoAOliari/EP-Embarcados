@@ -1,26 +1,93 @@
-; vers�o de 10/05/2007
-; corrigido erro de arredondamento na rotina line.
-; circle e full_circle disponibilizados por Jefferson Moro em 10/2009
-;
 segment code
 ..start:
-    		mov 		ax,data
-    		mov 		ds,ax
-    		mov 		ax,stack
-    		mov 		ss,ax
-    		mov 		sp,stacktop
+		mov 		ax,data
+		mov 		ds,ax
+		mov 		ax,stack
+		mov 		ss,ax
+		mov 		sp,stacktop
 
 ; salvar modo corrente de video(vendo como est� o modo de video da maquina)
-            mov  		ah,0Fh
-    		int  		10h
-    		mov  		[modo_anterior],al   
+		mov  		ah,0Fh
+		int  		10h
+		mov  		[modo_anterior],al   
 
 ; alterar modo de video para gr�fico 640x480 16 cores
-            mov     	al,12h
-            mov     	ah,0
-            int     	10h
-		
+		mov     	al,12h
+		mov     	ah,0
+		int     	10h
 
+inicializacao:
+		call 	desenhaInterface
+
+		mov		ax, 1h
+		int		33h
+
+loopPrincipal:
+		mov 	ax, 5h
+		mov		bx, 0h
+		int		33h
+		mov		[mouseOn], bx
+		mov		[mouseXPos], cx
+		mov		[mouseYPos], dx 
+
+		; verifica ativacao do mouse
+		cmp 	word[mouseOn], 1
+		jne		loopPrincipal
+
+		; botoes todos acima de 80 pixels
+		cmp 	word[mouseYPos], 80 
+		ja 		loopPrincipal
+
+		; checagem de botoes
+		cmp 	word[mouseXPos], 89
+		jbe		Abrir
+
+		cmp 	word[mouseXPos], 159
+		jbe		Sair
+
+		cmp 	word[mouseXPos], 300
+		jbe		PassaBaixas
+
+		cmp 	word[mouseXPos], 469
+		jbe		PassaAltas
+		jmp 	Gradiente
+
+Abrir:
+		call 	desenhaInterface
+		mov		byte[cor], amarelo
+		call	wAbrir
+		jmp		loopPrincipal
+
+Sair:
+		call 	desenhaInterface
+		mov		byte[cor], amarelo
+		call	wSair
+
+	    mov  	ah,0   			; set video mode
+	    mov  	al,[modo_anterior]   	; modo anterior
+	    int  	10h
+		mov     ax,4c00h
+		int     21h
+
+PassaBaixas:
+		call 	desenhaInterface
+		mov		byte[cor], amarelo
+		call	wPassaBaixas
+		jmp		loopPrincipal
+
+PassaAltas:
+		call 	desenhaInterface
+		mov		byte[cor], amarelo
+		call	wPassaAltas
+		jmp		loopPrincipal
+		
+Gradiente:
+		call 	desenhaInterface
+		mov		byte[cor], amarelo
+		call	wGradiente
+		jmp		loopPrincipal
+
+desenhaInterface:
 ;desenhar retas
         ; linha horizontal 1
 		mov		byte[cor],branco_intenso
@@ -35,7 +102,6 @@ segment code
 		call		line
 
         ; linha horizontal 2
-        mov		byte[cor],branco_intenso
 		mov		ax,0
 		push		ax
 		mov		ax,99
@@ -47,7 +113,6 @@ segment code
 		call		line
 
         ; linha vertical central
-        mov		byte[cor],branco_intenso
 		mov		ax,300
 		push		ax
 		mov		ax,99
@@ -59,7 +124,6 @@ segment code
 		call		line
 
         ; abrir | sair
-        mov		byte[cor],branco_intenso
 		mov		ax,89
 		push		ax
 		mov		ax,399
@@ -71,7 +135,6 @@ segment code
 		call		line
 
         ; sair | passa-baixas
-        mov		byte[cor],branco_intenso
 		mov		ax,159
 		push		ax
 		mov		ax,399
@@ -83,7 +146,6 @@ segment code
 		call		line
 
         ; passa-altas | gradiente
-        mov		byte[cor],branco_intenso
 		mov		ax,469
 		push		ax
 		mov		ax,399
@@ -95,7 +157,6 @@ segment code
 		call		line
 
         ; quadro com nome
-        mov		byte[cor],branco_intenso
 		mov		ax,19
 		push		ax
 		mov		ax,9
@@ -106,7 +167,6 @@ segment code
 		push		ax
 		call		line
 
-        mov		byte[cor],branco_intenso
 		mov		ax,619
 		push		ax
 		mov		ax,9
@@ -117,7 +177,6 @@ segment code
 		push		ax
 		call		line
 
-        mov		byte[cor],branco_intenso
 		mov		ax,619
 		push		ax
 		mov		ax,89
@@ -128,7 +187,6 @@ segment code
 		push		ax
 		call		line
 
-        mov		byte[cor],branco_intenso
 		mov		ax,19
 		push		ax
 		mov		ax,89
@@ -139,14 +197,23 @@ segment code
 		push		ax
 		call		line
 
+		call 	wAbrir
+		call 	wSair
+		call 	wPassaBaixas
+		call 	wPassaAltas
+		call 	wGradiente
+		call	wNomeDisciplina
+
+
+;------------------------------------------------------------
 ;escrever mensagens
-
+wAbrir:
         ; Abrir
     	mov     	cx,5			;n�mero de caracteres
     	mov     	bx,0
     	mov     	dh,2			
     	mov     	dl,3			
-		mov		byte[cor],branco_intenso
+		; mov		byte[cor],branco_intenso
 
 l4:
 		call	cursor
@@ -155,13 +222,15 @@ l4:
     	inc     bx			;proximo caracter
 		inc		dl			;avanca a coluna
     	loop    l4
+		ret
 
+wSair:
         ; Sair
     	mov     	cx,4			
     	mov     	bx,0
     	mov     	dh,2			
     	mov     	dl,14			
-		mov		byte[cor],branco_intenso
+		; mov		byte[cor],branco_intenso
 
 l5:
 		call	cursor
@@ -170,13 +239,15 @@ l5:
     	inc     bx			
 		inc		dl			
     	loop    l5
+		ret
 
+wPassaBaixas:
         ; Passa-Baixas
     	mov     	cx,12			
     	mov     	bx,0
     	mov     	dh,2			
     	mov     	dl,23			
-		mov		byte[cor],branco_intenso
+		; mov		byte[cor],branco_intenso
 
 l6:
 		call	cursor
@@ -185,13 +256,15 @@ l6:
     	inc     bx			
 		inc		dl			
     	loop    l6
+		ret
 
+wPassaAltas:
         ; Passa-Altas
     	mov     	cx,11			
     	mov     	bx,0
     	mov     	dh,2			
     	mov     	dl,43			
-		mov		byte[cor],branco_intenso
+		; mov		byte[cor],branco_intenso
 
 l7:
 		call	cursor
@@ -200,13 +273,15 @@ l7:
     	inc     bx			
 		inc		dl			
     	loop    l7
+		ret
 
+wGradiente:
         ; Gradiente
     	mov     	cx,9			
     	mov     	bx,0
     	mov     	dh,2			
     	mov     	dl,65			
-		mov		byte[cor],branco_intenso
+		; mov		byte[cor],branco_intenso
 
 l8:
 		call	cursor
@@ -215,13 +290,15 @@ l8:
     	inc     bx			
 		inc		dl			;avanca a coluna
     	loop    l8
+		ret
 
+wNomeDisciplina:
         ; Nome
     	mov     	cx,29			
     	mov     	bx,0
     	mov     	dh,26			
     	mov     	dl,24			
-		mov		byte[cor],branco_intenso
+		; mov		byte[cor],branco_intenso
 
 l9:
 		call	cursor
@@ -236,7 +313,7 @@ l9:
     	mov     	bx,0
     	mov     	dh,27			
     	mov     	dl,23			
-		mov		byte[cor],branco_intenso
+		; mov		byte[cor],branco_intenso
 
 l10:
 		call	cursor
@@ -245,14 +322,9 @@ l10:
     	inc     bx			
 		inc		dl			;avanca a coluna
     	loop    l10
+		ret
 
-		mov    	ah,08h
-		int     21h
-	    mov  	ah,0   			; set video mode
-	    mov  	al,[modo_anterior]   	; modo anterior
-	    int  	10h
-		mov     ax,4c00h
-		int     21h
+;------------------------------------------------------------
 ;***************************************************************************
 ;
 ;   fun��o cursor
@@ -826,6 +898,9 @@ passa_altas db          'Passa-Altas'
 gradiente   db          'Gradiente'
 nome        db          'Marco Antonio Milaneze Oliari'
 embarcados  db          'Sistemas Embarcados I - 2022/1'
+mouseOn		dw			0
+mouseXPos	dw			0
+mouseYPos	dw			0
 ;*************************************************************************
 segment stack stack
     		resb 		512
