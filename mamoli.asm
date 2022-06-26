@@ -126,6 +126,7 @@ novoPixel:
     mov ax, word[i]
     push ax
     mov ax, word[j]
+    add ax, 98
     push ax
     call plot_xy
     mov ax, 0
@@ -163,6 +164,9 @@ terminaAbrir:
     mov ah, 3eh
     mov bx, [handle]
     int 21h
+
+    mov word[fileref], 0
+    mov word[fileref + 2], 0
     ret
 
 desenhaInterface:
@@ -182,11 +186,11 @@ desenhaInterface:
     ; linha horizontal 2
 		mov		ax,0
 		push		ax
-		mov		ax,99
+		mov		ax,98
 		push		ax
 		mov		ax,639
 		push		ax
-		mov		ax,99
+		mov		ax,98
 		push		ax
 		call		line
 
