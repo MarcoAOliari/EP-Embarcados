@@ -104,9 +104,13 @@ leBuffer:
 novaLinha:
     mov bx, 0
     mov dl, byte[buffer]
-    inc bx
     mov ax, 0
     mov cl, 10
+    inc bx
+    cmp dl, ' '
+    je leProx
+    sub dl, '0'
+    mov al, dl
 
 leProx:
     mov dl, byte[buffer + bx]
