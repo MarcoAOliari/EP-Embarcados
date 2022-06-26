@@ -56,6 +56,12 @@ Abrir:
 		call 	desenhaInterface
 		mov		byte[cor], amarelo
 		call	wAbrir
+
+    mov   ax, 3d00h
+    mov   dx, file
+    int   21h
+    mov   [handle], ax
+    call  leBuffer
 		jmp		loopPrincipal
 
 Sair:
@@ -63,11 +69,11 @@ Sair:
 		mov		byte[cor], amarelo
 		call	wSair
 
-	    mov  	ah,0   			; set video mode
-	    mov  	al,[modo_anterior]   	; modo anterior
-	    int  	10h
-		mov     ax,4c00h
-		int     21h
+    mov  	ah,0   			; set video mode
+    mov  	al,[modo_anterior]   	; modo anterior
+    int  	10h
+		mov   ax,4c00h
+		int   21h
 
 PassaBaixas:
 		call 	desenhaInterface
@@ -80,16 +86,88 @@ PassaAltas:
 		mov		byte[cor], amarelo
 		call	wPassaAltas
 		jmp		loopPrincipal
-		
+
 Gradiente:
 		call 	desenhaInterface
 		mov		byte[cor], amarelo
 		call	wGradiente
 		jmp		loopPrincipal
 
+leBuffer:
+    mov word[i], 0
+    mov ah, 3fh
+    mov bx, [handle]
+    mov dx, buffer
+    mov cx, 1200
+    int 21h
+
+novaLinha:
+    mov bx, 0
+    mov dl, byte[buffer]
+    inc bx
+    mov ax, 0
+    mov cl, 10
+
+leProx:
+    mov dl, byte[buffer + bx]
+    inc bx
+    cmp dl, ' '
+    je  novoPixel
+    sub dl, '0'
+    mul cl
+    add al, dl
+    jmp leProx
+
+novoPixel:
+    mov cl, 16
+    div cl
+    mov cl, 10
+    mov byte[cor], al
+    mov ax, word[i]
+    push ax
+    mov ax, word[j]
+    push ax
+    call plot_xy
+    mov ax, 0
+
+    inc word[i]
+    cmp word[i], 300
+    je  comparaJ
+    jmp leProx
+  
+comparaJ: ; terminou de ler uma linha
+    dec word[j]
+    cmp word[j], 0
+    je terminaAbrir
+completaBuffer:
+    mov dx, [fileref]
+    mov cx, [fileref + 2]
+    add dx, bx  ; soma o percorrido por bx na ultima leitura
+    adc cx, 0
+    mov [fileref], dx
+    mov [fileref + 2], cx
+    mov al, 0
+    mov bx, [handle]
+    mov ah, 42h
+    int 21h ; seek no arquivo
+    mov bx, 0
+
+    mov ax, 0
+    mov word[i], 0
+
+    jmp leBuffer
+
+terminaAbrir:
+    mov word[i], 0
+    mov word[j], 300
+    mov ah, 3eh
+    mov bx, [handle]
+    int 21h
+    ret
+
 desenhaInterface:
 ;desenhar retas
-        ; linha horizontal 1
+    ; linha horizontal 1
 		mov		byte[cor],branco_intenso
 		mov		ax,0
 		push		ax
@@ -101,7 +179,7 @@ desenhaInterface:
 		push		ax
 		call		line
 
-        ; linha horizontal 2
+    ; linha horizontal 2
 		mov		ax,0
 		push		ax
 		mov		ax,99
@@ -112,7 +190,7 @@ desenhaInterface:
 		push		ax
 		call		line
 
-        ; linha vertical central
+    ; linha vertical central
 		mov		ax,300
 		push		ax
 		mov		ax,99
@@ -123,7 +201,7 @@ desenhaInterface:
 		push		ax
 		call		line
 
-        ; abrir | sair
+    ; abrir | sair
 		mov		ax,89
 		push		ax
 		mov		ax,399
@@ -134,7 +212,7 @@ desenhaInterface:
 		push		ax
 		call		line
 
-        ; sair | passa-baixas
+    ; sair | passa-baixas
 		mov		ax,159
 		push		ax
 		mov		ax,399
@@ -145,7 +223,7 @@ desenhaInterface:
 		push		ax
 		call		line
 
-        ; passa-altas | gradiente
+    ; passa-altas | gradiente
 		mov		ax,469
 		push		ax
 		mov		ax,399
@@ -156,7 +234,7 @@ desenhaInterface:
 		push		ax
 		call		line
 
-        ; quadro com nome
+    ; quadro com nome
 		mov		ax,19
 		push		ax
 		mov		ax,9
@@ -203,7 +281,7 @@ desenhaInterface:
 		call 	wPassaAltas
 		call 	wGradiente
 		call	wNomeDisciplina
-
+    ret
 
 ;------------------------------------------------------------
 ;escrever mensagens
@@ -213,7 +291,6 @@ wAbrir:
     	mov     	bx,0
     	mov     	dh,2			
     	mov     	dl,3			
-		; mov		byte[cor],branco_intenso
 
 l4:
 		call	cursor
@@ -230,7 +307,6 @@ wSair:
     	mov     	bx,0
     	mov     	dh,2			
     	mov     	dl,14			
-		; mov		byte[cor],branco_intenso
 
 l5:
 		call	cursor
@@ -247,7 +323,6 @@ wPassaBaixas:
     	mov     	bx,0
     	mov     	dh,2			
     	mov     	dl,23			
-		; mov		byte[cor],branco_intenso
 
 l6:
 		call	cursor
@@ -264,7 +339,6 @@ wPassaAltas:
     	mov     	bx,0
     	mov     	dh,2			
     	mov     	dl,43			
-		; mov		byte[cor],branco_intenso
 
 l7:
 		call	cursor
@@ -281,7 +355,6 @@ wGradiente:
     	mov     	bx,0
     	mov     	dh,2			
     	mov     	dl,65			
-		; mov		byte[cor],branco_intenso
 
 l8:
 		call	cursor
@@ -298,7 +371,6 @@ wNomeDisciplina:
     	mov     	bx,0
     	mov     	dh,26			
     	mov     	dl,24			
-		; mov		byte[cor],branco_intenso
 
 l9:
 		call	cursor
@@ -313,7 +385,6 @@ l9:
     	mov     	bx,0
     	mov     	dh,27			
     	mov     	dl,23			
-		; mov		byte[cor],branco_intenso
 
 l10:
 		call	cursor
@@ -901,6 +972,12 @@ embarcados  db          'Sistemas Embarcados I - 2022/1'
 mouseOn		dw			0
 mouseXPos	dw			0
 mouseYPos	dw			0
+file      db            'imagem.txt',0
+handle  dw      0
+buffer    resb    1200
+i         dw      0
+j         dw      300
+fileref   dw      0,0
 ;*************************************************************************
 segment stack stack
     		resb 		512
