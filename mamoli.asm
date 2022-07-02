@@ -80,6 +80,9 @@ PassaBaixas:
 		mov		byte[cor], amarelo
 		call	wPassaBaixas
 
+		mov word[filtro], 1
+		mov word[j], 302
+
 		mov   ax, 3d00h
     mov   dx, file
     int   21h
@@ -188,7 +191,8 @@ leLinhas:
     mov cx, 1200
     int 21h
 
-		; mov al, 0
+		mov byte[linha1], 0
+		mov byte[linha1 + 301], 0
 		mov byte[linha2], 0
 		mov byte[linha2 + 301], 0
 		mov byte[linha3], 0
@@ -247,15 +251,15 @@ proxLinha:
 		mov word[i], 0
 		cmp word[j], 0
 		je fimLeitura
-		cmp word[j], 299
+		cmp word[j], 301
 		jne realizaTroca
-		call imprimeLinha
+		; call imprimeLinha
 		jmp encheBuffer
-		; jmp leLinha
 	
 realizaTroca:
+		call aplicaFiltro
 		call trocaLinhas
-		call imprimeLinha
+		; call imprimeLinha
 		jmp encheBuffer
 
 trocaLinhas: 
@@ -267,14 +271,50 @@ trocaLinhas:
 		mov bx, 1
 
 		loopTroca:
+			mov dl, byte[linha2 + bx]
+			mov byte[linha1 + bx], dl
 			mov dl, byte[linha3 + bx]
 			mov byte[linha2 + bx], dl
 			inc bx
 			loop loopTroca
 
+		cmp word[j], 1
+		je zeraLinha3
+
 		pop dx
 		pop cx
 		pop bx
+		ret
+
+zeraLinha3:
+		mov cx, 300
+		mov bx, 1
+
+		loopz3:
+			mov byte[linha3 + bx], 0
+			inc bx
+			loop loopz3
+
+		pop dx
+		pop cx
+		pop bx
+		ret
+
+; imul idiv
+; mov al, byte[linha2 + bx]
+;	mov cx, -1
+; imul cx
+; mov dx, ax
+
+fimLeitura:
+		mov word[i], 0
+    mov word[j], 300
+    mov ah, 3eh
+    mov bx, [handle]
+    int 21h
+
+    mov word[fileref], 0
+    mov word[fileref + 2], 0
 		ret
 
 imprimeLinha:
@@ -309,16 +349,7 @@ imprimeLinha:
 		pop ax
 		ret
 
-fimLeitura:
-		mov word[i], 0
-    mov word[j], 300
-    mov ah, 3eh
-    mov bx, [handle]
-    int 21h
 
-    mov word[fileref], 0
-    mov word[fileref + 2], 0
-		ret
 
 preencheLinha:
 		cmp word[linhaAtual], 2
@@ -337,6 +368,92 @@ preencheLinha3:
 		mov bx, word[i]
 		mov byte[linha3 + bx], al
 		pop bx
+		ret
+
+aplicaFiltro:
+		cmp word[filtro], 1
+		je filtro_pb
+		cmp word[filtro], 2
+		je filtro_pa
+		jmp filtro_gr
+
+filtro_pb:
+		call pb
+		ret
+
+filtro_pa:
+		call pa
+		ret
+
+filtro_gr:
+		call gr
+		ret
+
+pb:
+		push ax
+		push bx
+		push cx
+		push dx
+
+		mov dx, 0
+		mov cx, 300
+		mov bx, 1
+		mov ax, 0
+
+		loop_pb:
+			mov al, byte[linha1 + bx - 1]
+			mov dl, byte[linha1 + bx]
+			add ax, dx
+			mov dl, byte[linha1 + bx + 1]
+			add ax, dx
+			mov dl, byte[linha2 + bx - 1]
+			add ax, dx
+			mov dl, byte[linha2 + bx]
+			add ax, dx
+			mov dl, byte[linha2 + bx + 1]
+			add ax, dx
+			mov dl, byte[linha3 + bx - 1]
+			add ax, dx
+			mov dl, byte[linha3 + bx]
+			add ax, dx
+			mov dl, byte[linha3 + bx + 1]
+			add ax, dx
+
+			mov dl, 9
+			div dl
+	
+			call pixelFiltro
+
+			inc bx
+			loop loop_pb
+
+		pop dx
+		pop cx
+		pop bx
+		pop ax
+		ret
+
+pa:
+		ret
+
+gr:
+		ret
+
+pixelFiltro:
+		mov dl, 16
+		div dl
+
+		mov byte[cor], al
+		mov ax, bx
+		add ax, 300
+		push ax
+		mov ax, word[j]
+		add ax, 98
+		push ax
+		call plot_xy
+		mov ax, 0
+		mov dx, 0
+
 		ret
 
 desenhaInterface:
@@ -1157,6 +1274,7 @@ inicio		 dw			1
 i         dw      0
 j         dw      300
 k 				dw			0			; para armazenar uma linha nos filtros
+filtro		dw			0
 fileref   dw      0,0
 ;*************************************************************************
 segment stack stack
