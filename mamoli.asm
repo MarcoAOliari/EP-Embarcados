@@ -79,6 +79,13 @@ PassaBaixas:
 		call 	desenhaInterface
 		mov		byte[cor], amarelo
 		call	wPassaBaixas
+
+		mov   ax, 3d00h
+    mov   dx, file
+    int   21h
+    mov   [handle], ax
+		call 	leLinhas
+
 		jmp		loopPrincipal
 
 PassaAltas:
@@ -172,6 +179,165 @@ terminaAbrir:
     mov word[fileref], 0
     mov word[fileref + 2], 0
     ret
+
+leLinhas:
+		mov word[i], 0
+    mov ah, 3fh
+    mov bx, [handle]
+    mov dx, buffer
+    mov cx, 1200
+    int 21h
+
+		; mov al, 0
+		mov byte[linha2], 0
+		mov byte[linha2 + 301], 0
+		mov byte[linha3], 0
+		mov byte[linha3 + 301], 0
+
+;preenchimento de linhas para os filtros
+primeiroChar:
+		mov bx, 0
+    mov dl, byte[buffer]
+    mov ax, 0
+    mov cl, 10
+    inc bx
+    cmp dl, ' '
+    je leLinha
+    sub dl, '0'
+    mov al, dl
+
+leLinha:
+		mov dl, byte[buffer + bx]
+    inc bx
+    cmp dl, ' '
+    je  inteiroLido
+    sub dl, '0'
+    mul cl
+    add al, dl
+    jmp leLinha
+
+inteiroLido:
+		inc word[i]
+		call preencheLinha
+		cmp word[i], 300
+		je proxLinha
+		mov ax, 0
+		jmp leLinha
+
+encheBuffer:
+		mov dx, [fileref]
+    mov cx, [fileref + 2]
+    add dx, bx  ; soma o percorrido por bx na ultima leitura
+    adc cx, 0
+    mov [fileref], dx
+    mov [fileref + 2], cx
+    mov al, 0
+    mov bx, [handle]
+    mov ah, 42h
+    int 21h ; seek no arquivo
+    
+		mov bx, 0
+    mov ax, 0
+
+    jmp leLinhas
+
+proxLinha:
+		dec word[j]
+		mov word[linhaAtual], 3
+		mov word[i], 0
+		cmp word[j], 0
+		je fimLeitura
+		cmp word[j], 299
+		jne realizaTroca
+		call imprimeLinha
+		jmp encheBuffer
+		; jmp leLinha
+	
+realizaTroca:
+		call trocaLinhas
+		call imprimeLinha
+		jmp encheBuffer
+
+trocaLinhas: 
+		push bx
+		push cx
+		push dx
+
+		mov cx, 300
+		mov bx, 1
+
+		loopTroca:
+			mov dl, byte[linha3 + bx]
+			mov byte[linha2 + bx], dl
+			inc bx
+			loop loopTroca
+
+		pop dx
+		pop cx
+		pop bx
+		ret
+
+imprimeLinha:
+		push ax
+		push bx
+		push cx
+		push dx
+
+		mov dl, 16
+		mov cx, 300
+		mov bx, 1
+		mov ax, 0
+
+			loopImprime:
+				mov al, byte[linha2 + bx]
+				div dl
+				mov byte[cor], al
+				mov ax, bx
+				add ax, 300
+				push ax
+				mov ax, word[j]
+				add ax, 98
+				push ax
+				call plot_xy
+				mov ax, 0
+				inc bx
+				loop loopImprime
+
+		pop dx
+		pop cx
+		pop bx
+		pop ax
+		ret
+
+fimLeitura:
+		mov word[i], 0
+    mov word[j], 300
+    mov ah, 3eh
+    mov bx, [handle]
+    int 21h
+
+    mov word[fileref], 0
+    mov word[fileref + 2], 0
+		ret
+
+preencheLinha:
+		cmp word[linhaAtual], 2
+		je preencheLinha2
+		jmp preencheLinha3
+
+preencheLinha2:
+		push bx
+		mov bx, word[i]
+		mov byte[linha2 + bx], al
+		pop bx
+		ret
+
+preencheLinha3:
+		push bx
+		mov bx, word[i]
+		mov byte[linha3 + bx], al
+		pop bx
+		ret
 
 desenhaInterface:
 ;desenhar retas
@@ -983,8 +1149,14 @@ mouseYPos	dw			0
 file      db            'imagem.txt',0
 handle  dw      0
 buffer    resb    1200
+linha1:		times		302	db	0
+linha2:		times		302	db	0
+linha3		resb		302
+linhaAtual dw			2
+inicio		 dw			1
 i         dw      0
 j         dw      300
+k 				dw			0			; para armazenar uma linha nos filtros
 fileref   dw      0,0
 ;*************************************************************************
 segment stack stack
