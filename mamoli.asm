@@ -492,9 +492,20 @@ pa:
 			call linha1Pa
 			call linha2Pa
 			call linha3Pa
+
+			cmp ax, 0
+			jge comparaSaturacao
+
+			mov ax, 0
+
+			comparaSaturacao:
+				cmp ax, 255
+				jle dividePa
+				mov ax, 255
 	
-			mov dl, 16
-			idiv dl
+			dividePa:
+				mov dl, 16
+				idiv dl
 
 			call pixelFiltro
 
