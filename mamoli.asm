@@ -494,11 +494,11 @@ pa:
 			call linha3Pa
 
 			cmp ax, 0
-			jge comparaSaturacao
+			jge comparaSaturacaoPa
 
 			mov ax, 0
 
-			comparaSaturacao:
+			comparaSaturacaoPa:
 				cmp ax, 255
 				jle dividePa
 				mov ax, 255
@@ -598,16 +598,40 @@ gr:
 
 		loop_gr:
 			call gr_gx
-			; call gr_gy
+			call modulo_ax
+			mov word[gx], ax
 
-			mov dl, 16
-			idiv dl
+			mov ax, 0
+			mov dx, 0
+			mov di, 0
+
+			call gr_gy
+			call modulo_ax
+			mov dx, word[gx]
+			add ax, dx
+
+			cmp ax, 0
+			jge comparaSaturacaoGr
+
+			mov ax, 0
+
+			comparaSaturacaoGr:
+				cmp ax, 255
+				jle divideGr
+				mov ax, 255
+
+			divideGr:
+				mov dx, 0
+				mov dl, 16
+				idiv dl
 
 			call pixelFiltro
 
 			inc bx
+
 			mov word[gx], 0
 			mov word[gy], 0
+			mov di, 0
 			loop loop_gr
 
 		pop di
@@ -618,8 +642,18 @@ gr:
 		pop ax
 		ret
 
+modulo_ax:
+		cmp ax, 0
+		jl inverteSinal
+		ret
+		inverteSinal:
+			mov dx, -1
+			imul dx
+			ret
+
 gr_gx:
 		call gr_gx_l1
+		call gr_gx_l3
 		ret
 
 gr_gx_l1:
@@ -657,12 +691,54 @@ gr_gx_l3:
 
 		mov di, ax
 		mov ax, 0
-		mov dx, 2
 		mov al, byte[linha3 + bx + 1]
+		add ax, di
+		ret
+
+gr_gy:
+		call gr_gy_c1
+		call gr_gy_c3
+		ret	
+
+gr_gy_c1:
+		mov al, byte[linha1 + bx - 1]
+		mov dx, -1
+		imul dx
+
+		mov di, ax
+		mov ax, 0
+		mov dx, -2
+		mov al, byte[linha2 + bx - 1]
+		imul dx
+		add ax, di
+
+		mov di, ax
+		mov ax, 0
+		mov dx, -1
+		mov al, byte[linha3 + bx - 1]
 		imul dx
 		add ax, di
 		ret
-		
+
+gr_gy_c3:
+		mov di, ax
+		mov ax, 0
+		mov al, byte[linha1 + bx + 1]
+		add ax, di
+
+		mov di, ax
+		mov ax, 0
+		mov dx, 2
+		mov al, byte[linha2 + bx + 1]
+		imul dx
+		add ax, di
+
+		mov di, ax
+		mov ax, 0
+		mov al, byte[linha3 + bx + 1]
+		add ax, di
+		ret
+
 pixelFiltro:
 		mov byte[cor], al
 		mov ax, bx
