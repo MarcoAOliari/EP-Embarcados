@@ -80,6 +80,7 @@ PassaBaixas:
 		mov		byte[cor], amarelo
 		call	wPassaBaixas
 
+		; escolhe o id do filtro
 		mov word[filtro], 1
 		mov word[j], 302
 
@@ -95,6 +96,17 @@ PassaAltas:
 		call 	desenhaInterface
 		mov		byte[cor], amarelo
 		call	wPassaAltas
+
+		; escolhe o id do filtro
+		mov word[filtro], 2
+		mov word[j], 302
+
+		mov   ax, 3d00h
+    mov   dx, file
+    int   21h
+    mov   [handle], ax
+		call 	leLinhas
+
 		jmp		loopPrincipal
 
 Gradiente:
@@ -253,13 +265,11 @@ proxLinha:
 		je fimLeitura
 		cmp word[j], 301
 		jne realizaTroca
-		; call imprimeLinha
 		jmp encheBuffer
 	
 realizaTroca:
 		call aplicaFiltro
 		call trocaLinhas
-		; call imprimeLinha
 		jmp encheBuffer
 
 trocaLinhas: 
@@ -300,12 +310,6 @@ zeraLinha3:
 		pop bx
 		ret
 
-; imul idiv
-; mov al, byte[linha2 + bx]
-;	mov cx, -1
-; imul cx
-; mov dx, ax
-
 fimLeitura:
 		mov word[i], 0
     mov word[j], 300
@@ -315,6 +319,26 @@ fimLeitura:
 
     mov word[fileref], 0
     mov word[fileref + 2], 0
+		call zeraLinhas
+		mov word[linhaAtual], 2
+		ret
+
+zeraLinhas:
+		push bx
+		push cx
+
+		mov cx, 300
+		mov bx, 1
+
+		loopZera:
+			mov byte[linha1 + bx], 0
+			mov byte[linha2 + bx], 0
+			mov byte[linha3 + bx], 0
+			inc bx
+			loop loopZera
+
+		pop cx
+		pop bx
 		ret
 
 imprimeLinha:
@@ -421,7 +445,9 @@ pb:
 
 			mov dl, 9
 			div dl
-	
+			mov dl, 16
+			div dl
+
 			call pixelFiltro
 
 			inc bx
@@ -434,15 +460,106 @@ pb:
 		ret
 
 pa:
+		push ax
+		push bx
+		push cx
+		push dx
+		push si
+		push di
+
+		mov dx, 0
+		mov cx, 300
+		mov bx, 1
+		mov ax, 0
+		mov si, 0
+
+		loop_pa:
+			call linha1Pa
+			call linha2Pa
+			call linha3Pa
+	
+			mov dl, 16
+			idiv dl
+
+			call pixelFiltro
+
+			inc bx
+			loop loop_pa
+
+		pop di
+		pop si
+		pop dx
+		pop cx
+		pop bx
+		pop ax
+		ret
+
+linha1Pa:
+		mov al, byte[linha1 + bx - 1]
+		mov dx, -1
+		imul dx
+
+		mov di, ax
+		mov ax, 0
+		mov al, byte[linha1 + bx]
+		imul dx
+		add ax, di
+
+		mov di, ax
+		mov ax, 0
+		mov al, byte[linha1 + bx + 1]
+		imul dx
+		add ax, di
+		ret
+
+linha2Pa:
+		mov di, ax
+		mov ax, 0
+		mov al, byte[linha2 + bx - 1]
+		imul dx
+		add ax, di
+
+		mov dx, 9
+
+		mov di, ax
+		mov ax, 0
+		mov al, byte[linha2 + bx]
+		imul dx
+		add ax, di
+
+		mov dx, -1
+
+		mov di, ax
+		mov ax, 0
+		mov al, byte[linha2 + bx + 1]
+		imul dx
+		add ax, di
+		ret
+
+linha3Pa:
+		mov di, ax
+		mov ax, 0
+		mov al, byte[linha3 + bx - 1]
+		imul dx
+		add ax, di
+
+		mov di, ax
+		mov ax, 0
+		mov al, byte[linha3 + bx]
+		imul dx
+		add ax, di
+
+		mov di, ax
+		mov ax, 0
+		mov al, byte[linha3 + bx + 1]
+		imul dx
+		add ax, di
 		ret
 
 gr:
 		ret
 
 pixelFiltro:
-		mov dl, 16
-		div dl
-
 		mov byte[cor], al
 		mov ax, bx
 		add ax, 300
