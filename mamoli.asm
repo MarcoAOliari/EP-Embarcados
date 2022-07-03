@@ -113,6 +113,17 @@ Gradiente:
 		call 	desenhaInterface
 		mov		byte[cor], amarelo
 		call	wGradiente
+
+		; escolhe o id do filtro
+		mov word[filtro], 3
+		mov word[j], 302
+
+		mov   ax, 3d00h
+    mov   dx, file
+    int   21h
+    mov   [handle], ax
+		call 	leLinhas
+
 		jmp		loopPrincipal
 
 leBuffer:
@@ -269,6 +280,7 @@ proxLinha:
 	
 realizaTroca:
 		call aplicaFiltro
+		; call imprimeLinha
 		call trocaLinhas
 		jmp encheBuffer
 
@@ -321,6 +333,8 @@ fimLeitura:
     mov word[fileref + 2], 0
 		call zeraLinhas
 		mov word[linhaAtual], 2
+		mov ax, 0
+		mov bx, 0
 		ret
 
 zeraLinhas:
@@ -443,16 +457,17 @@ pb:
 			mov dl, byte[linha3 + bx + 1]
 			add ax, dx
 
-			mov dl, 9
-			div dl
-			mov dl, 16
+			mov dl, 144 ; divisao por 9 e 16
 			div dl
 
 			call pixelFiltro
 
+			mov dx, 0
+			mov ax, 0
+
 			inc bx
 			loop loop_pb
-
+		
 		pop dx
 		pop cx
 		pop bx
@@ -556,9 +571,87 @@ linha3Pa:
 		add ax, di
 		ret
 
-gr:
+gr:	
+		push ax
+		push bx
+		push cx
+		push dx
+		push si
+		push di
+
+		mov dx, 0
+		mov cx, 300
+		mov bx, 1
+		mov ax, 0
+		mov si, 0
+
+		loop_gr:
+			call gr_gx
+			; call gr_gy
+
+			mov dl, 16
+			idiv dl
+
+			call pixelFiltro
+
+			inc bx
+			mov word[gx], 0
+			mov word[gy], 0
+			loop loop_gr
+
+		pop di
+		pop si
+		pop dx
+		pop cx
+		pop bx
+		pop ax
 		ret
 
+gr_gx:
+		call gr_gx_l1
+		ret
+
+gr_gx_l1:
+		mov al, byte[linha1 + bx - 1]
+		mov dx, -1
+		imul dx
+
+		mov di, ax
+		mov ax, 0
+		mov dx, -2
+		mov al, byte[linha1 + bx]
+		imul dx
+		add ax, di
+
+		mov di, ax
+		mov ax, 0
+		mov dx, -1
+		mov al, byte[linha1 + bx + 1]
+		imul dx
+		add ax, di
+		ret
+
+gr_gx_l3:
+		mov di, ax
+		mov ax, 0
+		mov al, byte[linha3 + bx - 1]
+		add ax, di
+
+		mov di, ax
+		mov ax, 0
+		mov dx, 2
+		mov al, byte[linha3 + bx]
+		imul dx
+		add ax, di
+
+		mov di, ax
+		mov ax, 0
+		mov dx, 2
+		mov al, byte[linha3 + bx + 1]
+		imul dx
+		add ax, di
+		ret
+		
 pixelFiltro:
 		mov byte[cor], al
 		mov ax, bx
@@ -891,52 +984,6 @@ plot_xy:
 		popf
 		pop		bp
 		ret		4
-;_____________________________________________________________________________
-;    fun��o circle
-;	 push xc; push yc; push r; call circle;  (xc+r<639,yc+r<479)e(xc-r>0,yc-r>0)
-; cor definida na variavel cor
-circle:
-	push 	bp
-	mov	 	bp,sp
-	pushf                        ;coloca os flags na pilha
-	push 	ax
-	push 	bx
-	push	cx
-	push	dx
-	push	si
-	push	di
-	
-	mov		ax,[bp+8]    ; resgata xc
-	mov		bx,[bp+6]    ; resgata yc
-	mov		cx,[bp+4]    ; resgata r
-	
-	mov 	dx,bx	
-	add		dx,cx       ;ponto extremo superior
-	push    ax			
-	push	dx
-	call plot_xy
-	
-	mov		dx,bx
-	sub		dx,cx       ;ponto extremo inferior
-	push    ax			
-	push	dx
-	call plot_xy
-	
-	mov 	dx,ax	
-	add		dx,cx       ;ponto extremo direita
-	push    dx			
-	push	bx
-	call plot_xy
-	
-	mov		dx,ax
-	sub		dx,cx       ;ponto extremo esquerda
-	push    dx			
-	push	bx
-	call plot_xy
-		
-	mov		di,cx
-	sub		di,1	 ;di=r-1
-	mov		dx,0  	;dx ser� a vari�vel x. cx � a variavel y
 	
 ;aqui em cima a l�gica foi invertida, 1-r => r-1
 ;e as compara��es passaram a ser jl => jg, assim garante 
@@ -1391,6 +1438,8 @@ inicio		 dw			1
 i         dw      0
 j         dw      300
 k 				dw			0			; para armazenar uma linha nos filtros
+gx				dw			0
+gy				dw			0
 filtro		dw			0
 fileref   dw      0,0
 ;*************************************************************************
