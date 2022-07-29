@@ -22,17 +22,21 @@ segment code
 	
   call desenhaLinhas
   call textoEmbarcados
-
+	call escreveNome
+	call escreveComputador
+	call escreveVelocidadeAtual
 inicio:
-;desenha circulo 
-  mov		byte[cor],preto	;circulo preto
-  push	word[px]
-  push	word[py]
+	call desenhaPlacar
+
+	;desenha circulo preto
+  mov		byte[cor],preto	
+  push	word[px_bola]
+  push	word[py_bola]
   push	word 10
   call	full_circle
 
 checa_x:
-  mov 	ax, [px]
+  mov 	ax, [px_bola]
   add		ax, [velx]
   cmp		ax, 629
   jge		troca_x
@@ -44,7 +48,7 @@ troca_x:
   imul	bx
   mov		[velx], ax
 checa_y:
-  mov 	ax, [py]
+  mov 	ax, [py_bola]
   add		ax, [vely]
   cmp		ax, 399
   jge		troca_y
@@ -58,13 +62,13 @@ troca_y:
 
 move_bola:
 		mov		byte[cor],vermelho	;circulo vermelho
-		mov 	ax, [px]
+		mov 	ax, [px_bola]
 		add		ax, [velx]
-		mov		[px], ax
+		mov		[px_bola], ax
 		push 	ax
-		mov 	ax, [py]
+		mov 	ax, [py_bola]
 		add		ax, [vely]
-		mov		[py], ax
+		mov		[py_bola], ax
 		push 	ax
 		push	word 10
 		call	full_circle
@@ -89,7 +93,6 @@ del1:
         pop cx ; Recupera cx da pilha
         loop del2 ; No loop del2, cx é decrementado até que seja zero
         ret
-
 desenhaLinhas:
 ;desenhar retas
   mov		byte[cor],branco_intenso	
@@ -103,7 +106,6 @@ desenhaLinhas:
   push		ax
   call		line
 
-  mov		byte[cor],branco_intenso	
   mov		ax, 639
   push		ax
   mov		ax, 0
@@ -114,7 +116,6 @@ desenhaLinhas:
   push		ax
   call		line
 
-  mov		byte[cor],branco_intenso	
   mov		ax, 639
   push		ax
   mov		ax, 479
@@ -125,7 +126,6 @@ desenhaLinhas:
   push		ax
   call		line
 
-  mov		byte[cor],branco_intenso	
   mov		ax, 0
   push		ax
   mov		ax, 479
@@ -136,7 +136,6 @@ desenhaLinhas:
   push		ax
   call		line
 
-  mov		byte[cor],branco_intenso	
   mov		ax, 0
   push		ax
   mov		ax, 409
@@ -163,6 +162,107 @@ textoEmbarcados:
     loop lEmbarcados
   ret
 
+escreveNome:
+	mov cx, 29
+	mov bx, 0
+	mov dh, 3
+	mov dl, 4
+
+	lNome:
+		call cursor
+    mov al, [bx+nome]
+    call caracter
+    inc bx
+    inc dl
+    loop lNome
+  ret
+
+escreveComputador:
+	mov cx, 10
+	mov bx, 0
+	mov dh, 3
+	mov dl, 42
+
+	lComputador:
+		call cursor
+    mov al, [bx+computador]
+    call caracter
+    inc bx
+    inc dl
+    loop lComputador
+  ret
+
+escreveVelocidadeAtual:
+	mov cx, 18
+	mov bx, 0
+	mov dh, 3
+	mov dl, 55
+
+	lVelocidadeAtual:
+		call cursor
+    mov al, [bx+velocidade_atual_txt]
+    call caracter
+    inc bx
+    inc dl
+    loop lVelocidadeAtual
+	mov cx, 1
+	mov bx, 0
+	mov dh, 3
+	mov dl, 73
+
+	call cursor
+	mov al, [bx+velocidade_jogo]
+	add al, '0'
+	call caracter
+	ret
+
+desenhaPlacar:
+	mov		byte[cor],branco_intenso
+	mov cx, 1
+	mov dh, 3
+	mov dl, 34
+	call cursor
+	mov al, [player_points_1]
+	add al, '0'
+	call caracter
+
+	mov cx, 1
+	mov dh, 3
+	mov dl, 35
+	call cursor
+	mov al, [player_points_0]
+	add al, '0'
+	call caracter
+
+	mov cx, 3
+	mov bx, 0
+	mov dh, 3
+	mov dl, 36
+
+	lPlacar:
+		call cursor
+    mov al, [bx+placar]
+    call caracter
+    inc bx
+    inc dl
+    loop lPlacar
+
+	mov cx, 1
+	mov dh, 3
+	mov dl, 39
+	call cursor
+	mov al, [pc_points_1]
+	add al, '0'
+	call caracter
+
+	mov cx, 1
+	mov dh, 3
+	mov dl, 40
+	call cursor
+	mov al, [pc_points_0]
+	add al, '0'
+	call caracter
+	ret
 cursor:
 		pushf
 		push 		ax
@@ -720,11 +820,22 @@ deltax		dw		0
 deltay		dw		0
 velx        dw      2
 vely        dw      2
-px          dw      320
-py          dw      240
+px_bola          dw      320
+py_bola          dw      240
+px_raquete			dw		600
+py_raquete			dw	240
+player_points_0		db 0
+pc_points_0				db 0
+player_points_1		db 0
+pc_points_1				db 0
 velocidade  dw      10
 mens    	db  		'Funcao Grafica'
 embarcados  db          'Exercicio de Programacao de Sistemas Embarcados I - 2022/2'
+nome        db          'Marco Antonio Milaneze Oliari'
+computador	db					'Computador'
+velocidade_atual_txt db 'Velocidade Atual: '
+velocidade_jogo		db 1
+placar				db ' x '
 ;*************************************************************************
 segment stack stack
     		resb 		512
