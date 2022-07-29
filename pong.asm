@@ -27,26 +27,32 @@ segment code
 	call escreveVelocidadeAtual
 inicio:
 	call desenhaPlacar
+	call desenhaRaquete
 
+	call sobrepoe_bola
 	;desenha circulo preto
-  mov		byte[cor],preto	
-  push	word[px_bola]
-  push	word[py_bola]
-  push	word 10
-  call	full_circle
+  ; mov		byte[cor],preto	
+  ; push	word[px_bola]
+  ; push	word[py_bola]
+  ; push	word 5
+  ; call	full_circle
 
 checa_x:
   mov 	ax, [px_bola]
   add		ax, [velx]
   cmp		ax, 629
-  jge		troca_x
+  jge		avalia_x
   cmp		ax, 9
   jge		checa_y
-troca_x:
-  mov		bx, -1
-  mov		ax, [velx]
-  imul	bx
-  mov		[velx], ax
+avalia_x:
+	cmp   word[velx], 0
+	jle		troca_x
+	call  incrementa_pc
+	troca_x:
+		mov		bx, -1
+		mov		ax, [velx]
+		imul	bx
+		mov		[velx], ax
 checa_y:
   mov 	ax, [py_bola]
   add		ax, [vely]
@@ -70,7 +76,7 @@ move_bola:
 		add		ax, [vely]
 		mov		[py_bola], ax
 		push 	ax
-		push	word 10
+		push	word 5
 		call	full_circle
 
 		mov    	ah,0Bh
@@ -262,6 +268,38 @@ desenhaPlacar:
 	mov al, [pc_points_0]
 	add al, '0'
 	call caracter
+	ret
+
+desenhaRaquete:
+	mov		ax, 600
+  push		ax
+	mov bx, [py_raquete]
+  mov		ax, bx
+	sub bx, 50
+  push		ax
+  mov		ax, 600
+  push		ax
+  mov		ax, bx
+  push		ax
+  call		line
+	ret
+
+incrementa_pc:
+	cmp word[pc_points_0], 9
+	jl inc0_pc
+	mov word[pc_points_0], 0
+	inc word[pc_points_1]
+	ret
+	inc0_pc:
+		inc word[pc_points_0]
+		ret
+
+sobrepoe_bola:
+	mov		byte[cor],preto	
+  push	word[px_bola]
+  push	word[py_bola]
+  push	word 5
+  call	full_circle
 	ret
 cursor:
 		pushf
@@ -818,11 +856,10 @@ linha   	dw  		0
 coluna  	dw  		0
 deltax		dw		0
 deltay		dw		0
-velx        dw      2
-vely        dw      2
+velx        dw      1
+vely        dw      1
 px_bola          dw      320
 py_bola          dw      240
-px_raquete			dw		600
 py_raquete			dw	240
 player_points_0		db 0
 pc_points_0				db 0
