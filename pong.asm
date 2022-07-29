@@ -270,13 +270,13 @@ desenhaRaquete:
 	ret
 
 incrementa_pc:
-	cmp word[pc_points_0], 9
+	cmp byte[pc_points_0], 9
 	jl inc0_pc
-	mov word[pc_points_0], 0
-	inc word[pc_points_1]
+	mov byte[pc_points_0], 0
+	inc byte[pc_points_1]
 	ret
 	inc0_pc:
-		inc word[pc_points_0]
+		inc byte[pc_points_0]
 		ret
 
 sobrepoe_bola:
@@ -307,19 +307,48 @@ colisao_x:
   cmp		ax, 629
   jge		avalia_x
   cmp		ax, 9
-  jge		nao_colidiu
+  jge		nao_colidiu_parede
 	avalia_x:
 		cmp   word[velx], 0
-		jle		troca_x
+		jle		colidiu_parede
 		call  incrementa_pc
-	troca_x:
+	colidiu_parede:
 		mov		bx, -1
 		mov		ax, [velx]
 		imul	bx
 		mov		[velx], ax
-	nao_colidiu:
+	nao_colidiu_parede:
+		mov 	ax, word[px_bola]
+		cmp   word[velx], 0
+		jle 	nao_colidiu_raquete
+		cmp 	ax, 589
+		jne   nao_colidiu_raquete
+		mov 	ax,	word[py_bola]
+		cmp		ax, word[py_raquete]
+		jg		nao_colidiu_raquete
+		add 	ax, 50
+		cmp		ax, word[py_raquete]
+		jl    nao_colidiu_raquete
+
+		call  incrementa_player
+		mov		bx, -1
+		mov		ax, [velx]
+		imul	bx
+		mov		[velx], ax
+
+	nao_colidiu_raquete:
 		ret
 
+incrementa_player:
+	cmp byte[player_points_0], 9
+	jl inc0_player
+	mov byte[player_points_0], 0
+	inc byte[player_points_1]
+	ret
+	inc0_player:
+		inc byte[player_points_0]
+		ret
+	
 cursor:
 		pushf
 		push 		ax
