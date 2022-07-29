@@ -30,29 +30,25 @@ inicio:
 	call desenhaRaquete
 
 	call sobrepoe_bola
-	;desenha circulo preto
-  ; mov		byte[cor],preto	
-  ; push	word[px_bola]
-  ; push	word[py_bola]
-  ; push	word 5
-  ; call	full_circle
 
-checa_x:
-  mov 	ax, [px_bola]
-  add		ax, [velx]
-  cmp		ax, 629
-  jge		avalia_x
-  cmp		ax, 9
-  jge		checa_y
-avalia_x:
-	cmp   word[velx], 0
-	jle		troca_x
-	call  incrementa_pc
-	troca_x:
-		mov		bx, -1
-		mov		ax, [velx]
-		imul	bx
-		mov		[velx], ax
+	call colisao_x
+
+; checa_x:
+;   mov 	ax, [px_bola]
+;   add		ax, [velx]
+;   cmp		ax, 629
+;   jge		avalia_x
+;   cmp		ax, 9
+;   jge		checa_y
+; avalia_x:
+; 	cmp   word[velx], 0
+; 	jle		troca_x
+; 	call  incrementa_pc
+; 	troca_x:
+; 		mov		bx, -1
+; 		mov		ax, [velx]
+; 		imul	bx
+; 		mov		[velx], ax
 checa_y:
   mov 	ax, [py_bola]
   add		ax, [vely]
@@ -67,18 +63,7 @@ troca_y:
   mov		[vely], ax
 
 move_bola:
-		mov		byte[cor],vermelho	;circulo vermelho
-		mov 	ax, [px_bola]
-		add		ax, [velx]
-		mov		[px_bola], ax
-		push 	ax
-		mov 	ax, [py_bola]
-		add		ax, [vely]
-		mov		[py_bola], ax
-		push 	ax
-		push	word 5
-		call	full_circle
-
+		call desenha_bola_vermelha
 		mov    	ah,0Bh
 		int     21h
 		or 		al, al
@@ -301,6 +286,40 @@ sobrepoe_bola:
   push	word 5
   call	full_circle
 	ret
+
+desenha_bola_vermelha:
+	mov		byte[cor],vermelho	;circulo vermelho
+	mov 	ax, [px_bola]
+	add		ax, [velx]
+	mov		[px_bola], ax
+	push 	ax
+	mov 	ax, [py_bola]
+	add		ax, [vely]
+	mov		[py_bola], ax
+	push 	ax
+	push	word 5
+	call	full_circle
+	ret
+
+colisao_x:
+  mov 	ax, [px_bola]
+  add		ax, [velx]
+  cmp		ax, 629
+  jge		avalia_x
+  cmp		ax, 9
+  jge		nao_colidiu
+	avalia_x:
+		cmp   word[velx], 0
+		jle		troca_x
+		call  incrementa_pc
+	troca_x:
+		mov		bx, -1
+		mov		ax, [velx]
+		imul	bx
+		mov		[velx], ax
+	nao_colidiu:
+		ret
+
 cursor:
 		pushf
 		push 		ax
