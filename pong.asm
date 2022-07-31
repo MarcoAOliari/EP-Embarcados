@@ -10,6 +10,18 @@ segment code
   mov 		ss,ax
   mov 		sp,stacktop
 
+	; configuracao de interrupcao
+	cli
+	xor     ax, ax
+	mov     es, ax
+	mov     ax, [es:int9*4];carregou ax com offset anterior
+	mov     [offset_dos], ax        ; offset_dos guarda o end. para qual ip de int 9 estava apontando anteriormente
+	mov     ax, [es:int9*4+2]     ; cs_dos guarda o end. anterior de cs
+	mov     [cs_dos], ax		 
+	mov     [es:int9*4+2], cs
+	mov     WORD [es:int9*4],keyint
+	sti
+
 ; salvar modo corrente de video(vendo como est� o modo de video da maquina)
   mov  		ah,0Fh
   int  		10h
@@ -28,27 +40,9 @@ segment code
 inicio:
 	call desenhaPlacar
 	call desenhaRaquete
-
 	call sobrepoe_bola
-
 	call colisao_x
 
-; checa_x:
-;   mov 	ax, [px_bola]
-;   add		ax, [velx]
-;   cmp		ax, 629
-;   jge		avalia_x
-;   cmp		ax, 9
-;   jge		checa_y
-; avalia_x:
-; 	cmp   word[velx], 0
-; 	jle		troca_x
-; 	call  incrementa_pc
-; 	troca_x:
-; 		mov		bx, -1
-; 		mov		ax, [velx]
-; 		imul	bx
-; 		mov		[velx], ax
 checa_y:
   mov 	ax, [py_bola]
   add		ax, [vely]
@@ -66,24 +60,18 @@ move_bola:
 		call desenha_bola_vermelha
 		mov    	ah,0Bh
 		int     21h
-		or 		al, al
-		call 	delay
+		xor 		al, al
+		mov cx, 0
+		mov dx, 10
+		mov ah, 86h
+		int 15h
+		xor 		al, al
 		jz inicio
 
 		; fim loop
 		mov ah, 4ch
 		int 21h
     
-delay: ; Esteja atento pois talvez seja importante salvar contexto (no caso, CX, o que NÃO foi feito aqui).
-        mov cx, word [velocidade] ; Carrega “velocidade” em cx (contador para loop)
-del2:
-        push cx ; Coloca cx na pilha para usa-lo em outro loop
-        mov cx, 0800h ; Teste modificando este valor
-del1:
-        loop del1 ; No loop del1, cx é decrementado até que volte a ser zero
-        pop cx ; Recupera cx da pilha
-        loop del2 ; No loop del2, cx é decrementado até que seja zero
-        ret
 desenhaLinhas:
 ;desenhar retas
   mov		byte[cor],branco_intenso	
@@ -349,6 +337,73 @@ incrementa_player:
 		inc byte[player_points_0]
 		ret
 	
+keyint:
+	push    ax
+	push    bx
+	push    ds
+	mov     ax,data
+	mov     ds,ax
+	in      al, kb_data
+	inc     word [p_i]
+	and     word [p_i],7
+	mov     bx,[p_i]
+	mov     [bx+tecla],al
+	in      al, kb_ctl
+	or      al, 80h
+	out     kb_ctl, al
+	and     al, 7Fh
+	out     kb_ctl, al
+	mov     al, eoi
+	out     pictrl, al
+
+	L1:
+		mov     ax,[p_i]
+		CMP     ax,[p_t]
+		JE      L1
+		inc     word[p_t]
+		and     word[p_t],7
+		mov     bx,[p_t]
+		XOR     AX, AX
+		MOV     AL, [bx+tecla]
+		mov     [tecla_u],al
+		MOV     BL, 16
+		DIV     BL
+		ADD     Al, 30h
+		CMP     AL, 3Ah                                                                                              
+		JB      continua
+		ADD     AL, 07h
+
+	continua:        
+		MOV     [teclasc], AL
+		ADD     AH, 30h
+		CMP     AH, 3Ah
+		JB      continua1
+		ADD     AH, 07h
+
+	continua1:
+		MOV     [teclasc+1], AH
+		MOV     DX,teclasc
+		; MOV     AH, 9 ;imprimir string dos
+		; int     21h
+		CMP     BYTE [tecla_u], 81h ; COMPARAÇÃO DO ESC
+		JE      L2
+		JMP     L1
+
+	L2:
+		CLI
+		XOR     AX, AX
+		MOV     ES, AX
+		MOV     AX, [cs_dos]
+		MOV     [ES:int9*4+2], AX
+		MOV     AX, [offset_dos]
+		MOV     [ES:int9*4], AX 
+		MOV     AH, 4Ch
+		int     21h
+
+	pop     ds
+	pop     bx
+	pop     ax
+	iret
 cursor:
 		pushf
 		push 		ax
@@ -898,7 +953,15 @@ rosa		equ		12
 magenta_claro	equ		13
 amarelo		equ		14
 branco_intenso	equ		15
-
+int9    equ 	9h
+kb_data equ 	60h  ;PORTA DE LEITURA DE TECLADO
+kb_ctl  equ 	61h  ;PORTA DE RESET PARA PEDIR NOVA INTERRUPCAO
+pictrl  equ 	20h
+eoi     equ 	20h
+cs_dos  dw  	1
+offset_dos  dw 	1
+p_i     dw  	0   ;ponteiro p/ interrupcao (qnd pressiona tecla)  
+p_t     dw  	0   ;ponterio p/ interrupcao ( qnd solta tecla) 
 modo_anterior	db		0
 linha   	dw  		0
 coluna  	dw  		0
@@ -909,6 +972,7 @@ vely        dw      1
 px_bola          dw      320
 py_bola          dw      240
 py_raquete			dw	240
+tecla   resb  	8 
 player_points_0		db 0
 pc_points_0				db 0
 player_points_1		db 0
