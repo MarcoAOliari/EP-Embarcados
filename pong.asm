@@ -36,10 +36,11 @@ segment code
   call textoEmbarcados
 	call escreveNome
 	call escreveComputador
-	call escreveVelocidadeAtual
 inicio:
+	call leTeclado
 	call desenhaPlacar
 	call desenhaRaquete
+	call escreveVelocidadeAtual
 	call sobrepoe_bola
 	call colisao_x
 
@@ -61,16 +62,17 @@ move_bola:
 		mov    	ah,0Bh
 		int     21h
 		xor 		al, al
+
 		mov cx, 0
-		mov dx, 10
+		mov dx, word[vel_relogio]
 		mov ah, 86h
 		int 15h
-		xor 		al, al
+		xor 		ax, ax
+
 		jz inicio
 
 		; fim loop
-		mov ah, 4ch
-		int 21h
+		call fim_programa
     
 desenhaLinhas:
 ;desenhar retas
@@ -292,7 +294,7 @@ desenha_bola_vermelha:
 colisao_x:
   mov 	ax, [px_bola]
   add		ax, [velx]
-  cmp		ax, 629
+  cmp		ax, 634
   jge		avalia_x
   cmp		ax, 9
   jge		nao_colidiu_parede
@@ -309,7 +311,7 @@ colisao_x:
 		mov 	ax, word[px_bola]
 		cmp   word[velx], 0
 		jle 	nao_colidiu_raquete
-		cmp 	ax, 589
+		cmp 	ax, 594
 		jne   nao_colidiu_raquete
 		mov 	ax,	word[py_bola]
 		cmp		ax, word[py_raquete]
@@ -338,28 +340,34 @@ incrementa_player:
 		ret
 	
 keyint:
-	push    ax
+	PUSH    AX
 	push    bx
 	push    ds
 	mov     ax,data
 	mov     ds,ax
-	in      al, kb_data
-	inc     word [p_i]
-	and     word [p_i],7
+	IN      AL, kb_data
+	inc     WORD [p_i]
+	and     WORD [p_i],7
 	mov     bx,[p_i]
 	mov     [bx+tecla],al
-	in      al, kb_ctl
-	or      al, 80h
-	out     kb_ctl, al
-	and     al, 7Fh
-	out     kb_ctl, al
-	mov     al, eoi
-	out     pictrl, al
+	IN      AL, kb_ctl
+	OR      AL, 80h
+	OUT     kb_ctl, AL
+	AND     AL, 7Fh
+	OUT     kb_ctl, AL
+	MOV     AL, eoi
+	OUT     pictrl, AL
+	pop     ds
+	pop     bx
+	POP     AX
+	IRET
 
-	L1:
-		mov     ax,[p_i]
-		CMP     ax,[p_t]
-		JE      L1
+leTeclado:
+	mov     ax,[p_i]
+	CMP     ax,[p_t]
+	jne      leTeclado_leTecla
+	ret
+	leTeclado_leTecla:
 		inc     word[p_t]
 		and     word[p_t],7
 		mov     bx,[p_t]
@@ -370,40 +378,74 @@ keyint:
 		DIV     BL
 		ADD     Al, 30h
 		CMP     AL, 3Ah                                                                                              
-		JB      continua
+		JB      continua1
 		ADD     AL, 07h
 
-	continua:        
-		MOV     [teclasc], AL
-		ADD     AH, 30h
-		CMP     AH, 3Ah
-		JB      continua1
-		ADD     AH, 07h
+continua1:
+	CMP     BYTE [tecla_u], 81h	; compara ESC
+	JE      fim_programa
+	call    controle_jogo
+	ret
 
-	continua1:
-		MOV     [teclasc+1], AH
-		MOV     DX,teclasc
-		; MOV     AH, 9 ;imprimir string dos
-		; int     21h
-		CMP     BYTE [tecla_u], 81h ; COMPARAÇÃO DO ESC
-		JE      L2
-		JMP     L1
+fim_programa:
+	CLI
+	xor			ax, ax
+	MOV     ES, AX
+	MOV     AX, [cs_dos]
+	MOV     [ES:int9*4+2], AX
+	MOV     AX, [offset_dos]
+	MOV     [ES:int9*4], AX 
+	XOR     AX, AX
+	mov 		al, byte[modo_anterior]
+	int			10h
+	XOR     AX, AX
+	MOV     AH, 4Ch
+	int     21h
 
-	L2:
-		CLI
-		XOR     AX, AX
-		MOV     ES, AX
-		MOV     AX, [cs_dos]
-		MOV     [ES:int9*4+2], AX
-		MOV     AX, [offset_dos]
-		MOV     [ES:int9*4], AX 
-		MOV     AH, 4Ch
-		int     21h
+controle_jogo:
+	cmp byte[tecla_u], 4eh
+	je	inc_vel
+	cmp byte[tecla_u], 4ah
+	je	dec_vel
+	cmp byte[tecla_u], 16h
+	je sobe_raquete
+	cmp byte[tecla_u], 20h
+	je desce_raquete
+	ret
 
-	pop     ds
-	pop     bx
-	pop     ax
-	iret
+inc_vel:
+	cmp byte[velocidade_jogo], 5
+	je fim_controle
+	inc byte[velocidade_jogo]
+	sub word[vel_relogio], 1700
+	ret
+
+dec_vel:
+	cmp byte[velocidade_jogo], 1
+	je fim_controle
+	dec byte[velocidade_jogo]
+	add word[vel_relogio], 1700
+	ret
+
+sobe_raquete:
+	mov byte[cor], preto
+	call desenhaRaquete
+	cmp word[py_raquete], 400
+	jge fim_controle
+	add word[py_raquete], 8
+	ret
+
+desce_raquete:
+	mov byte[cor], preto
+	call desenhaRaquete
+	cmp word[py_raquete], 58
+	jle fim_controle
+	sub word[py_raquete], 8
+	ret
+
+fim_controle:
+	ret
+
 cursor:
 		pushf
 		push 		ax
@@ -962,6 +1004,8 @@ cs_dos  dw  	1
 offset_dos  dw 	1
 p_i     dw  	0   ;ponteiro p/ interrupcao (qnd pressiona tecla)  
 p_t     dw  	0   ;ponterio p/ interrupcao ( qnd solta tecla) 
+teclasc DB  	0,0,13,10,'$'
+tecla_u db 		0
 modo_anterior	db		0
 linha   	dw  		0
 coluna  	dw  		0
@@ -969,6 +1013,7 @@ deltax		dw		0
 deltay		dw		0
 velx        dw      1
 vely        dw      1
+vel_relogio	dw			8000
 px_bola          dw      320
 py_bola          dw      240
 py_raquete			dw	240
