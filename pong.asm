@@ -37,7 +37,7 @@ segment code
 	call escreveNome
 	call escreveComputador
 inicio:
-	call leTeclado
+	; call leTeclado
 	call desenhaPlacar
 	call desenhaRaquete
 	call escreveVelocidadeAtual
@@ -357,95 +357,94 @@ keyint:
 	OUT     kb_ctl, AL
 	MOV     AL, eoi
 	OUT     pictrl, AL
-	pop     ds
-	pop     bx
-	POP     AX
-	IRET
 
-leTeclado:
-	mov     ax,[p_i]
-	CMP     ax,[p_t]
-	jne      leTeclado_leTecla
-	ret
-	leTeclado_leTecla:
-		inc     word[p_t]
-		and     word[p_t],7
-		mov     bx,[p_t]
+	leTeclado:
+		mov     ax,[p_i]
+		CMP     ax,[p_t]
+		jne     leTeclado_leTecla
+		jmp			fim_controle
+		; ret
+		leTeclado_leTecla:
+			inc     word[p_t]
+			and     word[p_t],7
+			mov     bx,[p_t]
+			XOR     AX, AX
+			MOV     AL, [bx+tecla]
+			mov     [tecla_u],al
+
+	continua1:
+		CMP     BYTE [tecla_u], 81h	; compara ESC
+		JE      fim_programa
+		call    controle_jogo
+		jmp			fim_controle
+
+	fim_programa:
+		CLI
+		xor			ax, ax
+		MOV     ES, AX
+		MOV     AX, [cs_dos]
+		MOV     [ES:int9*4+2], AX
+		MOV     AX, [offset_dos]
+		MOV     [ES:int9*4], AX 
 		XOR     AX, AX
-		MOV     AL, [bx+tecla]
-		mov     [tecla_u],al
-		MOV     BL, 16
-		DIV     BL
-		ADD     Al, 30h
-		CMP     AL, 3Ah                                                                                              
-		JB      continua1
-		ADD     AL, 07h
+		mov 		al, byte[modo_anterior]
+		int			10h
+		XOR     AX, AX
+		MOV     AH, 4Ch
+		int     21h
 
-continua1:
-	CMP     BYTE [tecla_u], 81h	; compara ESC
-	JE      fim_programa
-	call    controle_jogo
-	ret
+	controle_jogo:
+		cmp byte[tecla_u], 4eh
+		je	inc_vel
+		cmp byte[tecla_u], 4ah
+		je	dec_vel
+		cmp byte[tecla_u], 16h
+		je sobe_raquete
+		cmp byte[tecla_u], 20h
+		je desce_raquete
+		ret
 
-fim_programa:
-	CLI
-	xor			ax, ax
-	MOV     ES, AX
-	MOV     AX, [cs_dos]
-	MOV     [ES:int9*4+2], AX
-	MOV     AX, [offset_dos]
-	MOV     [ES:int9*4], AX 
-	XOR     AX, AX
-	mov 		al, byte[modo_anterior]
-	int			10h
-	XOR     AX, AX
-	MOV     AH, 4Ch
-	int     21h
+	inc_vel:
+		cmp byte[velocidade_jogo], 5
+		je retorna_controle
+		inc byte[velocidade_jogo]
+		sub word[vel_relogio], 1700
+		ret
 
-controle_jogo:
-	cmp byte[tecla_u], 4eh
-	je	inc_vel
-	cmp byte[tecla_u], 4ah
-	je	dec_vel
-	cmp byte[tecla_u], 16h
-	je sobe_raquete
-	cmp byte[tecla_u], 20h
-	je desce_raquete
-	ret
+	dec_vel:
+		cmp byte[velocidade_jogo], 1
+		je retorna_controle
+		dec byte[velocidade_jogo]
+		add word[vel_relogio], 1700
+		ret
 
-inc_vel:
-	cmp byte[velocidade_jogo], 5
-	je fim_controle
-	inc byte[velocidade_jogo]
-	sub word[vel_relogio], 1700
-	ret
+	sobe_raquete:
+		mov byte[cor], preto
+		call desenhaRaquete
+		cmp word[py_raquete], 400
+		jge retorna_controle
+		add word[py_raquete], 8
+		ret
 
-dec_vel:
-	cmp byte[velocidade_jogo], 1
-	je fim_controle
-	dec byte[velocidade_jogo]
-	add word[vel_relogio], 1700
-	ret
+	desce_raquete:
+		mov byte[cor], preto
+		call desenhaRaquete
+		cmp word[py_raquete], 58
+		jle retorna_controle
+		sub word[py_raquete], 8
+		ret
 
-sobe_raquete:
-	mov byte[cor], preto
-	call desenhaRaquete
-	cmp word[py_raquete], 400
-	jge fim_controle
-	add word[py_raquete], 8
-	ret
+	retorna_controle:
+		ret
 
-desce_raquete:
-	mov byte[cor], preto
-	call desenhaRaquete
-	cmp word[py_raquete], 58
-	jle fim_controle
-	sub word[py_raquete], 8
-	ret
-
-fim_controle:
-	ret
-
+	fim_controle:
+		mov al, 20h
+		out 20h, al
+		pop     ds
+		pop     bx
+		POP     AX
+		IRET
+		
 cursor:
 		pushf
 		push 		ax
